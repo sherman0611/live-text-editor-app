@@ -30,7 +30,7 @@ function TextEditor() {
     const {id: documentId} = useParams()
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
-    const [filename, setFilename] = useState("Untitled");
+    const [filename, setFilename] = useState();
 
     // connect to server
     useEffect(() => {
@@ -46,7 +46,8 @@ function TextEditor() {
         if (socket == null || quill == null) return
         
         socket.once("load-document", document => {
-            quill.setContents(document)
+            setFilename(document.filename)
+            quill.setContents(document.data)
             quill.enable()
         })
 
@@ -98,6 +99,33 @@ function TextEditor() {
         }
     }, [socket, quill])
 
+    // update filename
+    const handleFilenameChange = (event) => {
+        setFilename(event.target.value);
+    };
+
+    useEffect(() => {
+        if (socket == null) return
+
+        socket.emit("save-filename", filename)
+
+    }, [socket, filename]);
+
+    // handle received filename change event
+    useEffect(() => {
+        if (socket == null || quill == null) return
+
+        const handler = (filename) => {
+            setFilename(filename);
+        }
+
+        socket.on("receive-filename-changes", handler)
+
+        return () => {
+            socket.off("receive-filename-changes", handler)
+        }
+    }, [socket, quill])
+
     async function downloadFile() {
         const delta = quill.getContents();
         const quillToWordConfig = {
@@ -124,6 +152,7 @@ function TextEditor() {
     
     return (
         <div className="container">
+            <input type="text" id="filename" name="filename" value={filename} maxLength="20" onChange={handleFilenameChange} />
             <button onClick={downloadFile}>Download file</button>
             <div ref={wrapperRef}></div>
         </div>

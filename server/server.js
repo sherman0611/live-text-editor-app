@@ -17,13 +17,14 @@ const io = require('socket.io')(3001, {
     }
 })
 
+const defaultFilename = "Untitled"
 const defaultValue = ""
 
 io.on("connection", socket => {
     socket.on("get-document", async documentId => {
         const document = await findOrCreateDocument(documentId)
         socket.join(documentId)
-        socket.emit("load-document", document.data)
+        socket.emit("load-document", document)
 
         socket.on("send-changes", delta => {
             socket.broadcast.to(documentId).emit("receive-changes", delta)
@@ -31,6 +32,11 @@ io.on("connection", socket => {
 
         socket.on("save-document", async data => {
             await Document.findByIdAndUpdate(documentId, { data })
+        })
+
+        socket.on("save-filename", async filename => {
+            await Document.findByIdAndUpdate(documentId, { filename })
+            socket.broadcast.to(documentId).emit("receive-filename-changes", filename)
         })
     })
 })
@@ -40,5 +46,5 @@ async function findOrCreateDocument(id) {
 
     const document = await Document.findById(id)
     if (document) return document
-    return await Document.create({ _id: id, data: defaultValue })
+    return await Document.create({ _id: id, filename: defaultFilename, data: defaultValue })
 }
