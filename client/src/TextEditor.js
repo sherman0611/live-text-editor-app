@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
 
 const SAVE_INTERVAL = 2000
+const SAVE_FILENAME_TIMEOUT = 3000
 
 const fontSizeArr = ['10px', '12px', '14px', '16px', '20px', '24px', '32px']
 
@@ -63,9 +64,7 @@ function TextEditor() {
             socket.emit("save-document", quill.getContents())
         }, SAVE_INTERVAL)
 
-        return () => {
-            clearInterval(interval)
-        }
+        return () => clearInterval(interval)
     }, [socket, quill])
 
     // handle received text change event
@@ -101,14 +100,23 @@ function TextEditor() {
 
     // update filename
     const handleFilenameChange = (event) => {
-        setFilename(event.target.value);
+        const newFilename = event.target.value;
+        
+        if (newFilename.trim() === "") {
+            setFilename("Untitled");
+        } else {
+            setFilename(newFilename);
+        }
     };
 
     useEffect(() => {
-        if (socket == null) return
+        if (socket == null || filename == null) return;
 
-        socket.emit("save-filename", filename)
+        const timeout = setTimeout(() => {
+            socket.emit("save-filename", filename);
+        }, SAVE_FILENAME_TIMEOUT);
 
+        return () => clearTimeout(timeout);
     }, [socket, filename]);
 
     // handle received filename change event
