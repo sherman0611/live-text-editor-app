@@ -3,10 +3,19 @@ import Quill from 'quill'
 import "quill/dist/quill.snow.css"
 import { io } from 'socket.io-client'
 import { useParams } from 'react-router-dom'
+import { saveAs } from 'file-saver';
+import * as quillToWord from 'quill-to-word';
 
 const SAVE_INTERVAL = 2000
+
+const fontSizeArr = ['10px', '12px', '14px', '16px', '20px', '24px', '32px']
+
+var Size = Quill.import('attributors/style/size');
+Size.whitelist = fontSizeArr
+Quill.register(Size, true);
+
 const TOOLBAR_OPTIONS = [
-    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    [{ 'size': fontSizeArr }],
     [{ font: [] }],
     ["bold", "italic", "underline"],
     [{ list: "ordered" }, { list: "bullet" }],
@@ -21,6 +30,7 @@ function TextEditor() {
     const {id: documentId} = useParams()
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
+    const [filename, setFilename] = useState("Untitled");
 
     // connect to server
     useEffect(() => {
@@ -88,6 +98,15 @@ function TextEditor() {
         }
     }, [socket, quill])
 
+    async function downloadFile() {
+        const delta = quill.getContents();
+        const quillToWordConfig = {
+            exportAs: 'blob'
+        };
+        const docAsBlob = await quillToWord.generateWord(delta, quillToWordConfig);
+        saveAs(docAsBlob, `${filename}.docx`);
+    }
+
     // set up quill editor
     const wrapperRef = useCallback(wrapper => {
         if (wrapper == null) return
@@ -104,7 +123,10 @@ function TextEditor() {
     }, [])
     
     return (
-        <div className="container" ref={wrapperRef}></div>
+        <div className="container">
+            <button onClick={downloadFile}>Download file</button>
+            <div ref={wrapperRef}></div>
+        </div>
     )
 }
 
