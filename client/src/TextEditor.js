@@ -7,7 +7,7 @@ import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
 
 const SAVE_INTERVAL = 2000
-const SAVE_FILENAME_TIMEOUT = 3000
+const SAVE_FILENAME_TIMEOUT = 1000
 
 const fontSizeArr = ['10px', '12px', '14px', '16px', '20px', '24px', '32px']
 
@@ -45,14 +45,14 @@ function TextEditor() {
 
     useEffect(() => {
         if (socket == null || quill == null) return
+
+        socket.emit("get-document", documentId)
         
         socket.once("load-document", document => {
             setFilename(document.filename)
             quill.setContents(document.data)
             quill.enable()
         })
-
-        socket.emit("get-document", documentId)
 
     }, [socket, quill, documentId])
 

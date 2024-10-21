@@ -3,7 +3,13 @@ const Document = require("./Document")
 
 mongoose.connect("mongodb://localhost/live-text-editor")
 
-// mongoose.connect("mongodb://localhost/google-docs-clone", {
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', () => {
+    console.log('Connected to MongoDB');
+});
+
+// mongoose.connect("mongodb://localhost/live-text-editor", {
 //     useNewUrlParser: true,
 //     useUnifiedTopology: true,
 //     // useFindAndModify: false,
@@ -21,10 +27,35 @@ const defaultFilename = "Untitled"
 const defaultValue = ""
 
 io.on("connection", socket => {
+
+    socket.on("get-all-documents", async () => {
+        try {
+            const allDocuments = await Document.find();
+            socket.emit("receive-all-documents", allDocuments);
+        } catch (error) {
+            console.error("Error fetching documents:", error);
+        }
+    });
+
+    socket.on("delete-document", async (documentId) => {
+        try {
+            await Document.findByIdAndDelete(documentId);
+            const allDocuments = await Document.find();
+            socket.emit("receive-all-documents", allDocuments);
+        } catch (error) {
+            console.error("Error deleting document:", error);
+        }
+    });
+
     socket.on("get-document", async documentId => {
-        const document = await findOrCreateDocument(documentId)
-        socket.join(documentId)
-        socket.emit("load-document", document)
+        try {
+            const document = await findOrCreateDocument(documentId)
+            socket.join(documentId)
+            socket.emit("load-document", document)
+        } catch (error) {
+            console.error("Error loading document:", error);
+        }
+        
 
         socket.on("send-changes", delta => {
             socket.broadcast.to(documentId).emit("receive-changes", delta)
