@@ -3,7 +3,7 @@ import { io } from 'socket.io-client'
 import { useNavigate, Link } from 'react-router-dom';
 import { v4 as uuidV4 } from 'uuid';
 
-function Menu() {
+function Home() {
     const navigate = useNavigate();
     const [socket, setSocket] = useState()
     const [documents, setDocuments] = useState([])
@@ -29,8 +29,20 @@ function Menu() {
         });
     }, [socket]);
 
-    const openNewFile = () => {
-        const newFileId = uuidV4();
+    const createNewFile = async () => {
+        if (socket == null) return;
+
+        let newFileId;
+        let isUnique = false;
+
+        while (!isUnique) {
+            newFileId = uuidV4();
+            const existingDocument = documents.find(doc => doc._id === newFileId);
+            if (!existingDocument) {
+                isUnique = true;
+            }
+        }
+
         navigate(`/documents/${newFileId}`);
     };
 
@@ -48,18 +60,22 @@ function Menu() {
         <div>
             <h1>Home</h1>
             <ul>
-                {documents.map((doc) => (
-                    <li>
-                        <Link to={`/documents/${doc._id}`}>
-                            {doc.filename}
-                        </Link>
-                        <button onClick={() => deleteFile(doc._id)}>Delete</button>
-                    </li>
-                ))}
+                {documents.length > 0 ? (
+                    documents.map((doc) => (
+                        <li key={doc._id}>
+                            <Link to={`/documents/${doc._id}`}>
+                                {doc.filename || 'Untitled Document'}
+                            </Link>
+                            <button onClick={() => deleteFile(doc._id)}>Delete</button>
+                        </li>
+                    ))
+                ) : (
+                    <p>No files</p>
+                )}
             </ul>
-            <button onClick={openNewFile}>Open new file</button>
+            <button onClick={createNewFile}>Create new file</button>
         </div>
     );
 }
 
-export default Menu;
+export default Home;

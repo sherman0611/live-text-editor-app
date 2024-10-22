@@ -1,32 +1,79 @@
+const express = require("express")
 const mongoose = require("mongoose")
-const Document = require("./Document")
+const cors = require("cors")
+const http = require('http') 
+const Document = require("./models/Document")
+const Account = require("./models/Account")
 
+// connect server to mongodb
 mongoose.connect("mongodb://localhost/live-text-editor")
-
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
     console.log('Connected to MongoDB');
 });
 
-// mongoose.connect("mongodb://localhost/live-text-editor", {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true,
-//     // useFindAndModify: false,
-//     // useCreateIndex: true,
-// })
+// set up express server
+const app = express()
+app.use(express.json())
+app.use(cors())
 
-const io = require('socket.io')(3001, {
+const server = http.createServer(app)
+
+// set up socket.io server
+const io = require('socket.io')(server, {
     cors: {
         origin: "http://localhost:3000",
         methods: ["GET", "POST"]
     }
 })
 
+// start server
+server.listen(3001, () => {
+    console.log("Server is running on port 3001")
+})
+
+app.get("/", (req, res) => {
+    res.send("Server is running");
+});
+
+app.post("/register", (req, res) => {
+    const { email, username } = req.body;
+
+    Account.findOne({
+        $or: [
+            { email: email },
+            { username: username }
+        ]
+    }).then(exist => {
+        if (exist) {
+            if (exist.email === email) {
+                return res.status(400).json({ message: "Email already in use." });
+            }
+            if (exist.username === username) {
+                return res.status(400).json({ message: "Username already exist." });
+            }
+        } else {
+            Account.create(req.body)
+                .then(account => {
+                    res.json(account);
+                    console.log("New account created: ", req.body);
+                }).catch(err => {
+                    console.error(err);
+                    res.status(500).json({ message: "An error occurred while creating the account." });
+                });
+        }
+    }).catch(err => {
+        console.error(err);
+        res.status(500).json({ message: "An error occurred while connecting to the database." });
+    });
+});
+
 const defaultFilename = "Untitled"
 const defaultValue = ""
 
 io.on("connection", socket => {
+    console.log('A user is connected to: ', socket.id);
 
     socket.on("get-all-documents", async () => {
         try {
