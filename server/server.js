@@ -37,8 +37,28 @@ app.get("/", (req, res) => {
     res.send("Server is running");
 });
 
-app.post("/register", (req, res) => {
-    const { email, username } = req.body;
+app.post("/login", (req, res) => {
+    const {email, password} = req.body
+
+    Account.findOne({email: email})
+        .then(account => {
+            if (account) {
+                if (account.password == password) {
+                    res.json("success")
+                } else {
+                    res.status(400).json({ message: "Incorrect password" })
+                }
+            } else {
+                res.status(400).json({ message: "Incorrect email" })
+            }
+        }).catch(err => {
+            console.error(err)
+            res.status(500).json({ message: "An error occurred while connecting to the database." })
+        });
+})
+
+app.post("/signup", (req, res) => {
+    const { email, username } = req.body
 
     Account.findOne({
         $or: [
@@ -48,24 +68,24 @@ app.post("/register", (req, res) => {
     }).then(exist => {
         if (exist) {
             if (exist.email === email) {
-                return res.status(400).json({ message: "Email already in use." });
+                return res.status(400).json({ message: "Email already in use." })
             }
             if (exist.username === username) {
-                return res.status(400).json({ message: "Username already exist." });
+                return res.status(400).json({ message: "Username already exist." })
             }
         } else {
             Account.create(req.body)
                 .then(account => {
-                    res.json(account);
+                    res.json(account)
                     console.log("New account created: ", req.body);
                 }).catch(err => {
-                    console.error(err);
-                    res.status(500).json({ message: "An error occurred while creating the account." });
+                    console.error(err)
+                    res.status(500).json({ message: "An error occurred while creating account." })
                 });
         }
     }).catch(err => {
-        console.error(err);
-        res.status(500).json({ message: "An error occurred while connecting to the database." });
+        console.error(err)
+        res.status(500).json({ message: "An error occurred while connecting to the database." })
     });
 });
 

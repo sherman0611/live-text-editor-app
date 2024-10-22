@@ -1,11 +1,12 @@
 import React, { useRef } from 'react'
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 
 function Signup() {
-    const emailRef = useRef();
-    const usernameRef = useRef();
-    const passwordRef = useRef();
+    const emailRef = useRef()
+    const usernameRef = useRef()
+    const passwordRef = useRef()
+    const navigate = useNavigate()
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -14,9 +15,10 @@ function Signup() {
         const username = usernameRef.current.value;
         const password = passwordRef.current.value;
 
-        axios.post('http://localhost:3001/register', { email, username, password })
+        axios.post('http://localhost:3001/signup', { email, username, password })
             .then(result => {
                 alert("Account created successfully");
+                navigate('/login')
             }).catch(err => {
                 alert(err.response.data.message || "Account creation failed");
             });

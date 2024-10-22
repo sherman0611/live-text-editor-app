@@ -36,7 +36,7 @@ function Home() {
         let isUnique = false;
 
         while (!isUnique) {
-            newFileId = uuidV4();
+            const newFileId = uuidV4();
             const existingDocument = documents.find(doc => doc._id === newFileId);
             if (!existingDocument) {
                 isUnique = true;
