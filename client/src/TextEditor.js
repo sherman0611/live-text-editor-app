@@ -6,6 +6,8 @@ import { useParams } from 'react-router-dom'
 import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
 import { useUser } from './UserContext';
+import { useNavigate } from "react-router-dom"
+import axios from 'axios';
 
 const SAVE_INTERVAL = 2000
 const SAVE_FILENAME_TIMEOUT = 1000
@@ -29,11 +31,14 @@ const TOOLBAR_OPTIONS = [
 ]
 
 function TextEditor() {
+    const navigate = useNavigate()
     const {id: documentId} = useParams()
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
     const { username, email } = useUser();
+
+    axios.defaults.withCredentials = true
 
     // connect to server
     useEffect(() => {
@@ -45,6 +50,18 @@ function TextEditor() {
         }
     }, [])
 
+    // check if user is logged in
+    useEffect(() => {
+        axios.get('http://localhost:3001/session-check')
+            .then(res => {
+                if (!res.data.valid) {
+                    navigate('/login')
+                }
+            }).catch(err => {
+                console.log(err)
+            })
+    }, []);
+
     useEffect(() => {
         if (socket == null || quill == null) return
 
@@ -55,6 +72,10 @@ function TextEditor() {
             quill.setContents(document.data)
             quill.enable()
         })
+
+        socket.once("access-denied", () => {
+            navigate('/access-denied')
+        });
 
     }, [socket, quill, documentId])
 
@@ -139,6 +160,10 @@ function TextEditor() {
         saveAs(docAsBlob, `${filename}.docx`);
     }
 
+    function addUserAccess() {
+        
+    }
+
     // set up quill editor
     const wrapperRef = useCallback(wrapper => {
         if (wrapper == null) return
@@ -158,6 +183,7 @@ function TextEditor() {
         <div className="container">
             <input type="text" id="filename" name="filename" value={filename} maxLength="20" onChange={handleFilenameChange} />
             <button onClick={downloadFile}>Download file</button>
+            <button onClick={addUserAccess}>Add user access</button>
             <div ref={wrapperRef}></div>
         </div>
     )

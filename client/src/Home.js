@@ -25,16 +25,17 @@ function Home() {
 
     // check if user is logged in
     useEffect(() => {
-        axios.get('http://localhost:3001')
+        axios.get('http://localhost:3001/session-check')
             .then(res => {
                 if (res.data.valid) {
                     setUsername(res.data.username)
-                    setEmail(res.data.email);
+                    setEmail(res.data.email)
                 } else {
                     navigate('/login')
                 }
             }).catch(err => {
                 console.log(err)
+                navigate('/login')
             })
     }, []);
 
@@ -42,16 +43,16 @@ function Home() {
     useEffect(() => {
         if (socket == null) return;
     
-        socket.emit("get-all-documents", email);
+        socket.emit("get-user-documents", email);
     
         const receiveDocuments = (documents) => {
             setDocuments(documents)
         };
     
-        socket.on("receive-all-documents", receiveDocuments)
+        socket.on("receive-user-documents", receiveDocuments)
     
         return () => {
-            socket.off("receive-all-documents", receiveDocuments)
+            socket.off("receive-user-documents", receiveDocuments)
         };
     }, [socket, email]); 
 
@@ -76,25 +77,16 @@ function Home() {
         if (socket == null) return;
 
         socket.emit("delete-document", { documentId: id, email});
-
-        const receiveDocuments = (documents) => {
-            setDocuments(documents)
-        };
-    
-        socket.on("receive-all-documents", receiveDocuments)
-    
-        return () => {
-            socket.off("receive-all-documents", receiveDocuments)
-        };
     };
 
     const logout = () => {
         axios.post('http://localhost:3001/logout')
             .then(() => {
-                setUsername(null); 
-                navigate('/login'); 
+                setUsername(null)
+                setEmail(null)
+                navigate('/login')
             }).catch(err => {
-                console.log('Logout error:', err);
+                console.log('Logout error:', err)
             });
     };
     

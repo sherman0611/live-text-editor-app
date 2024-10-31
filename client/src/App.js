@@ -2,6 +2,7 @@ import Login from "./Login";
 import Signup from "./Signup";
 import Home from "./Home";
 import TextEditor from "./TextEditor";
+import AccessDenied from "./AccessDenied";
 import {
     BrowserRouter as Router,
     Routes,
@@ -20,6 +21,7 @@ function App() {
 					<Route path="/signup" element={<Signup/>} />
 					<Route path="/home" element={<Home/>} />
 					<Route path="/documents/:id" element={<TextEditor/>} />
+					<Route path="/access-denied" element={<AccessDenied/>} />
 				</Routes>
 			</Router>
 		</UserProvider>

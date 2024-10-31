@@ -11,7 +11,7 @@ function Login() {
 
     // check if user is logged in
     useEffect(() => {
-        axios.get('http://localhost:3001')
+        axios.get('http://localhost:3001/session-check')
             .then(res => {
                 if (res.data.valid) {
                     navigate('/home')

@@ -5,7 +5,6 @@ const http = require('http')
 const session = require('express-session')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')
-// const jwt = require('jsonwebtoken') 
 const Document = require("./models/Document")
 const User = require("./models/User")
 
@@ -52,8 +51,8 @@ server.listen(3001, () => {
     console.log("Server is running on port 3001")
 })
 
-app.get("/", (req, res) => {
-    if (req.session.username && req.session.email) {
+app.get("/session-check", (req, res) => {
+    if (req.session && req.session.username && req.session.email) {
         res.json({valid: true, username: req.session.username, email: req.session.email})
     } else {
         res.json({valid: false})
@@ -130,20 +129,21 @@ const defaultValue = ""
 io.on("connection", socket => {
     console.log('A user is connected to: ', socket.id);
 
-    socket.on("get-all-documents", async (email) => {
+    socket.on("get-user-documents", async (email) => {
         try {
-            const allDocuments = await Document.find({ access: { $in: [email] } });
-            socket.emit("receive-all-documents", allDocuments);
+            const userDocuments = await Document.find({ access: { $in: [email] } });
+            socket.emit("receive-user-documents", userDocuments);
         } catch (error) {
             console.error("Error fetching documents:", error);
+            socket.emit("receive-user-documents", { error: "Failed to fetch documents." });
         }
     });
 
     socket.on("delete-document", async ({ documentId, email }) => {
         try {
             await Document.findByIdAndDelete(documentId);
-            const allDocuments = await Document.find({ access: { $in: [email] } });
-            socket.emit("receive-all-documents", allDocuments);
+            const userDocuments = await Document.find({ access: { $in: [email] } });
+            socket.emit("receive-user-documents", userDocuments);
         } catch (error) {
             console.error("Error deleting document:", error);
         }
@@ -152,13 +152,16 @@ io.on("connection", socket => {
     socket.on("get-document", async ({ documentId, email }) => {
         try {
             const document = await findOrCreateDocument(documentId, email)
+            if (!document.access.includes(email)) {
+                socket.emit("access-denied")
+                return
+            }
             socket.join(documentId)
             socket.emit("load-document", document)
         } catch (error) {
             console.error("Error loading document:", error);
         }
         
-
         socket.on("send-changes", delta => {
             socket.broadcast.to(documentId).emit("receive-changes", delta)
         })
