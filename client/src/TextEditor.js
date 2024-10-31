@@ -5,6 +5,7 @@ import { io } from 'socket.io-client'
 import { useParams } from 'react-router-dom'
 import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
+import { useUser } from './UserContext';
 
 const SAVE_INTERVAL = 2000
 const SAVE_FILENAME_TIMEOUT = 1000
@@ -31,7 +32,8 @@ function TextEditor() {
     const {id: documentId} = useParams()
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
-    const [filename, setFilename] = useState();
+    const [filename, setFilename] = useState("Untitled");
+    const { username, email } = useUser();
 
     // connect to server
     useEffect(() => {
@@ -46,7 +48,7 @@ function TextEditor() {
     useEffect(() => {
         if (socket == null || quill == null) return
 
-        socket.emit("get-document", documentId)
+        socket.emit("get-document", { documentId, email });
         
         socket.once("load-document", document => {
             setFilename(document.filename)
@@ -100,13 +102,7 @@ function TextEditor() {
 
     // update filename
     const handleFilenameChange = (event) => {
-        const newFilename = event.target.value;
-        
-        if (newFilename.trim() === "") {
-            setFilename("Untitled");
-        } else {
-            setFilename(newFilename);
-        }
+        setFilename(event.target.value.trim() === "" ? "Untitled" : event.target.value);
     };
 
     useEffect(() => {

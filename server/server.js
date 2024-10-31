@@ -53,8 +53,8 @@ server.listen(3001, () => {
 })
 
 app.get("/", (req, res) => {
-    if (req.session.username) {
-        res.json({valid: true, username: req.session.username})
+    if (req.session.username && req.session.email) {
+        res.json({valid: true, username: req.session.username, email: req.session.email})
     } else {
         res.json({valid: false})
     }
@@ -68,6 +68,7 @@ app.post("/login", async (req, res) => {
             if (result) {
                 if (result.password == password) {
                     req.session.username = result.username
+                    req.session.email = result.email
                     res.json({login: true})
                 } else {
                     res.status(400).json({ message: "Incorrect password" })
@@ -148,9 +149,9 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on("get-document", async documentId => {
+    socket.on("get-document", async ({ documentId, email }) => {
         try {
-            const document = await findOrCreateDocument(documentId)
+            const document = await findOrCreateDocument(documentId, email)
             socket.join(documentId)
             socket.emit("load-document", document)
         } catch (error) {
@@ -173,10 +174,15 @@ io.on("connection", socket => {
     })
 })
 
-async function findOrCreateDocument(id) {
+async function findOrCreateDocument(id, email) {
     if (id == null) return
 
     const document = await Document.findById(id)
     if (document) return document
-    return await Document.create({ _id: id, filename: defaultFilename, data: defaultValue })
+
+    return await Document.create({ _id: id, 
+        filename: defaultFilename, 
+        data: defaultValue,
+        access: [email]
+    })
 }

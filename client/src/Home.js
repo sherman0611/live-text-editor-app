@@ -3,12 +3,13 @@ import { io } from 'socket.io-client'
 import { useNavigate, Link } from 'react-router-dom';
 import { v4 as uuidV4 } from 'uuid';
 import axios from 'axios';
+import { useUser } from './UserContext';
 
 function Home() {
     const navigate = useNavigate();
     const [socket, setSocket] = useState()
     const [documents, setDocuments] = useState([])
-    const [username, setUsername] = useState()
+    const { username, setUsername, email, setEmail } = useUser();
 
     axios.defaults.withCredentials = true
     
@@ -28,6 +29,7 @@ function Home() {
             .then(res => {
                 if (res.data.valid) {
                     setUsername(res.data.username)
+                    setEmail(res.data.email);
                 } else {
                     navigate('/login')
                 }
@@ -54,7 +56,7 @@ function Home() {
         let isUnique = false;
 
         while (!isUnique) {
-            const newFileId = uuidV4();
+            newFileId = uuidV4();
             const existingDocument = documents.find(doc => doc._id === newFileId);
             if (!existingDocument) {
                 isUnique = true;
@@ -86,7 +88,8 @@ function Home() {
     
     return (
         <div>
-            <div>{username} is loggged in</div>
+            <div>{username}</div>
+            <div>{email}</div>
             <h1>Home</h1>
             <ul>
                 {documents.length > 0 ? (
