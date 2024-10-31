@@ -41,13 +41,19 @@ function Home() {
     // Get all documents from the database
     useEffect(() => {
         if (socket == null) return;
-
-        socket.emit("get-all-documents");
-
-        socket.once("receive-all-documents", (documents) => {
-            setDocuments(documents);
-        });
-    }, [socket]);
+    
+        socket.emit("get-all-documents", email);
+    
+        const receiveDocuments = (documents) => {
+            setDocuments(documents)
+        };
+    
+        socket.on("receive-all-documents", receiveDocuments)
+    
+        return () => {
+            socket.off("receive-all-documents", receiveDocuments)
+        };
+    }, [socket, email]); 
 
     const createNewFile = async () => {
         if (socket == null) return;
@@ -69,11 +75,17 @@ function Home() {
     const deleteFile = (id) => {
         if (socket == null) return;
 
-        socket.emit("delete-document", id);
+        socket.emit("delete-document", { documentId: id, email});
 
-        socket.once("receive-all-documents", (documents) => {
-            setDocuments(documents);
-        });
+        const receiveDocuments = (documents) => {
+            setDocuments(documents)
+        };
+    
+        socket.on("receive-all-documents", receiveDocuments)
+    
+        return () => {
+            socket.off("receive-all-documents", receiveDocuments)
+        };
     };
 
     const logout = () => {

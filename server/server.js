@@ -130,19 +130,19 @@ const defaultValue = ""
 io.on("connection", socket => {
     console.log('A user is connected to: ', socket.id);
 
-    socket.on("get-all-documents", async () => {
+    socket.on("get-all-documents", async (email) => {
         try {
-            const allDocuments = await Document.find();
+            const allDocuments = await Document.find({ access: { $in: [email] } });
             socket.emit("receive-all-documents", allDocuments);
         } catch (error) {
             console.error("Error fetching documents:", error);
         }
     });
 
-    socket.on("delete-document", async (documentId) => {
+    socket.on("delete-document", async ({ documentId, email }) => {
         try {
             await Document.findByIdAndDelete(documentId);
-            const allDocuments = await Document.find();
+            const allDocuments = await Document.find({ access: { $in: [email] } });
             socket.emit("receive-all-documents", allDocuments);
         } catch (error) {
             console.error("Error deleting document:", error);
