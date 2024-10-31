@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 
@@ -7,6 +7,20 @@ function Login() {
     const passwordRef = useRef()
     const navigate = useNavigate()
 
+    axios.defaults.withCredentials = true
+
+    // check if user is logged in
+    useEffect(() => {
+        axios.get('http://localhost:3001')
+            .then(res => {
+                if (res.data.valid) {
+                    navigate('/home')
+                }
+            }).catch(err => {
+                console.log(err)
+            })
+    }, []);
+
     const handleSubmit = (e) => {
         e.preventDefault()
 
@@ -14,8 +28,8 @@ function Login() {
         const password = passwordRef.current.value;
 
         axios.post('http://localhost:3001/login', { email, password })
-            .then(result => {
-                if (result.data === "success") {
+            .then(res => {
+                if (res.data.login) {
                     navigate('/home')
                 }
             }).catch(err => {

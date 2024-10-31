@@ -1,9 +1,13 @@
 const express = require("express")
 const mongoose = require("mongoose")
 const cors = require("cors")
-const http = require('http') 
+const http = require('http')
+const session = require('express-session')
+const cookieParser = require('cookie-parser')
+const bodyParser = require('body-parser')
+// const jwt = require('jsonwebtoken') 
 const Document = require("./models/Document")
-const Account = require("./models/Account")
+const User = require("./models/User")
 
 // connect server to mongodb
 mongoose.connect("mongodb://localhost/live-text-editor")
@@ -16,7 +20,22 @@ db.once('open', () => {
 // set up express server
 const app = express()
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+    origin: ["http://localhost:3000"],
+    methods: ["POST", "GET"],
+    credentials: true
+}))
+app.use(cookieParser())
+app.use(bodyParser.json())
+app.use(session({
+    secret: 'secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 24
+    }
+}))
 
 const server = http.createServer(app)
 
@@ -34,17 +53,22 @@ server.listen(3001, () => {
 })
 
 app.get("/", (req, res) => {
-    res.send("Server is running");
+    if (req.session.username) {
+        res.json({valid: true, username: req.session.username})
+    } else {
+        res.json({valid: false})
+    }
 });
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
     const {email, password} = req.body
 
-    Account.findOne({email: email})
-        .then(account => {
-            if (account) {
-                if (account.password == password) {
-                    res.json("success")
+    await User.findOne({email: email})
+        .then(result => {
+            if (result) {
+                if (result.password == password) {
+                    req.session.username = result.username
+                    res.json({login: true})
                 } else {
                     res.status(400).json({ message: "Incorrect password" })
                 }
@@ -57,15 +81,15 @@ app.post("/login", (req, res) => {
         });
 })
 
-app.post("/signup", (req, res) => {
+app.post("/signup", async (req, res) => {
     const { email, username } = req.body
 
-    Account.findOne({
+    await User.findOne({
         $or: [
             { email: email },
             { username: username }
         ]
-    }).then(exist => {
+    }).then(async exist => {
         if (exist) {
             if (exist.email === email) {
                 return res.status(400).json({ message: "Email already in use." })
@@ -74,9 +98,9 @@ app.post("/signup", (req, res) => {
                 return res.status(400).json({ message: "Username already exist." })
             }
         } else {
-            Account.create(req.body)
-                .then(account => {
-                    res.json(account)
+            await User.create(req.body)
+                .then(user => {
+                    res.status(200).json("success")
                     console.log("New account created: ", req.body);
                 }).catch(err => {
                     console.error(err)
@@ -86,6 +110,16 @@ app.post("/signup", (req, res) => {
     }).catch(err => {
         console.error(err)
         res.status(500).json({ message: "An error occurred while connecting to the database." })
+    });
+});
+
+app.post('/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).send('Log out failed');
+        }
+        res.clearCookie('connect.sid');
+        res.send({ success: true });
     });
 });
 
