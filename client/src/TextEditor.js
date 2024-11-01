@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom'
 import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
 import { useUser } from './UserContext';
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import axios from 'axios';
 
 const SAVE_INTERVAL = 2000
@@ -32,10 +32,12 @@ const TOOLBAR_OPTIONS = [
 
 function TextEditor() {
     const navigate = useNavigate()
+    const location = useLocation();
     const {id: documentId} = useParams()
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
+    const [hasAccess, setHasAccess] = useState(true);
     const { username, email } = useUser();
 
     axios.defaults.withCredentials = true
@@ -74,10 +76,14 @@ function TextEditor() {
         })
 
         socket.once("access-denied", () => {
-            navigate('/access-denied')
+            setHasAccess(false)
         });
 
-    }, [socket, quill, documentId])
+        if (!hasAccess) {
+            navigate('/access-denied', { state: { fromTextEditor: true } });
+        }
+
+    }, [socket, quill, documentId, hasAccess, navigate])
 
     // auto save
     useEffect(() => {

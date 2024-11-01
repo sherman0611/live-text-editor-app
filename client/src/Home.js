@@ -1,27 +1,14 @@
 import React, { useEffect, useState } from 'react'
-import { io } from 'socket.io-client'
 import { useNavigate, Link } from 'react-router-dom';
-import { v4 as uuidV4 } from 'uuid';
 import axios from 'axios';
 import { useUser } from './UserContext';
 
 function Home() {
     const navigate = useNavigate();
-    const [socket, setSocket] = useState()
     const [documents, setDocuments] = useState([])
     const { username, setUsername, email, setEmail } = useUser();
 
     axios.defaults.withCredentials = true
-    
-    // connect to server
-    useEffect(() => {
-        const s = io("http://localhost:3001")
-        setSocket(s)
-
-        return () => {
-            s.disconnect()
-        }
-    }, [])
 
     // check if user is logged in
     useEffect(() => {
@@ -39,48 +26,42 @@ function Home() {
             })
     }, []);
 
-    // Get all documents from the database
+    // Get documents from the database
     useEffect(() => {
-        if (socket == null) return;
-    
-        socket.emit("get-user-documents", email);
-    
-        const receiveDocuments = (documents) => {
-            setDocuments(documents)
-        };
-    
-        socket.on("receive-user-documents", receiveDocuments)
-    
-        return () => {
-            socket.off("receive-user-documents", receiveDocuments)
-        };
-    }, [socket, email]); 
+        axios.post('http://localhost:3001/get-documents', { email })
+            .then(res => {
+                setDocuments(res.data)
+            }).catch(err => {
+                console.log(err)
+            })
+    }, [email, documents]); 
 
-    const createNewFile = async () => {
-        if (socket == null) return;
+    const createNewDoc = async () => {
+        axios.post('http://localhost:3001/create-new-document')
+            .then(res => {
+                navigate(`/documents/${res.data.id}`);
+            }).catch(err => {
+                console.log(err)
+                alert("Error creating new document")
+            })
 
-        let newFileId;
-        let isUnique = false;
-
-        while (!isUnique) {
-            newFileId = uuidV4();
-            const existingDocument = documents.find(doc => doc._id === newFileId);
-            if (!existingDocument) {
-                isUnique = true;
-            }
-        }
-
-        navigate(`/documents/${newFileId}`);
+        
     };
 
     const deleteFile = (id) => {
-        if (socket == null) return;
-
-        socket.emit("delete-document", { documentId: id, email});
+        axios.post('http://localhost:3001/delete-document', {  id, email })
+            .then(() => {
+                alert("Document deleted")
+                setDocuments((prevDocuments) => prevDocuments.filter(doc => doc._id !== id));
+            })
+            .catch(err => {
+                console.log("Error deleting document:", err);
+                alert("Error deleting document")
+            });
     };
 
     const logout = () => {
-        axios.post('http://localhost:3001/logout')
+        axios.get('http://localhost:3001/logout')
             .then(() => {
                 setUsername(null)
                 setEmail(null)
@@ -109,7 +90,7 @@ function Home() {
                     <p>No files</p>
                 )}
             </ul>
-            <button onClick={createNewFile}>Create new file</button>
+            <button onClick={createNewDoc}>Create new document</button>
             <button onClick={logout}>Log out</button>
         </div>
     );

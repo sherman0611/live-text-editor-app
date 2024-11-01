@@ -6,6 +6,7 @@ const session = require('express-session')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')
 const bcrypt = require('bcrypt')
+const { v4: uuidv4 } = require('uuid');
 const Document = require("./models/Document")
 const User = require("./models/User")
 
@@ -61,56 +62,58 @@ app.get("/session-check", (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
-    await User.findOne({ email })
-        .then(async exist => {
-            if (exist) {
-                const isMatch = await bcrypt.compare(password, exist.password);
-                if (isMatch) {
-                    req.session.username = exist.username
-                    req.session.email = exist.email
-                    res.json({success: true})
-                } else {
-                    res.status(400).json({ message: "Incorrect password" })
-                }
-            } else {
-                res.status(400).json({ message: "Incorrect email" })
-            }
-        }).catch(err => {
-            console.error(err)
-            res.status(500).json({ message: "An error occurred while connecting to the database." })
-        });
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "Incorrect email" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Incorrect password" });
+        }
+
+        req.session.username = user.username;
+        req.session.email = user.email;
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error during login:", err);
+        res.status(500).json({ message: "An error occurred while connecting to the database." });
+    }
 })
 
 app.post("/signup", async (req, res) => {
-    const { email, username } = req.body
+    const { email, username, password } = req.body;
 
-    await User.findOne({ email })
-        .then(async exist => {
-            if (exist) {
-                return res.status(400).json({ message: "Email already in use." })
-            } else {
-                const salt = await bcrypt.genSalt(10);
-                const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    try {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "Email already in use." });
+        }
 
-                await User.create({email, username, password: hashedPassword})
-                    .then(() => {
-                        res.json({success: true})
-                    }).catch(err => {
-                        console.error(err)
-                        res.status(500).json({ message: "An error occurred while creating account." })
-                    });
-            }
-        }).catch(err => {
-            console.error(err)
-            res.status(500).json({ message: "An error occurred while connecting to the database." })
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        await User.create({
+            email,
+            username,
+            password: hashedPassword
         });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error during signup:", err);
+        res.status(500).json({ message: "An error occurred while creating the account." });
+    }
 });
 
-app.post('/logout', (req, res) => {
+app.get('/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) {
+            console.error("Error during logout:", err);
             return res.status(500).send('Log out failed');
         }
         res.clearCookie('connect.sid');
@@ -118,31 +121,65 @@ app.post('/logout', (req, res) => {
     });
 });
 
+app.post("/get-documents", async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const userDocuments = await Document.find({ access: { $in: [email] } });
+        res.json(userDocuments);
+    } catch (err) {
+        console.error("Error fetching documents:", err);
+        res.status(500).json({ message: "Failed to fetch documents." });
+    }
+});
+
+app.post("/delete-document", async (req, res) => {
+    const { id, email } = req.body;
+
+    try {
+        const document = await Document.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found." });
+        }
+
+        if (!document.access.includes(email)) {
+            return res.status(403).json({ message: "You do not have permission to delete this document." });
+        }
+
+        await Document.findByIdAndDelete(id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error deleting document:", error);
+        res.status(500).json({ message: "Failed to delete document." });
+    }
+});
+
+app.post("/create-new-document", async (req, res) => {
+    try {
+        let uniqueId;
+        let isUnique = false;
+
+        while (!isUnique) {
+            uniqueId = uuidv4();
+            const existingDocument = await Document.findById(uniqueId);
+
+            if (!existingDocument) {
+                isUnique = true;
+            }
+        }
+
+        res.json({ id: uniqueId });
+    } catch (error) {
+        console.error("Error generating unique document ID:", error);
+        res.status(500).json({ message: "Failed to create unique document ID." });
+    }
+});
+
 const defaultFilename = "Untitled"
 const defaultValue = ""
 
 io.on("connection", socket => {
     console.log('A user is connected to: ', socket.id);
-
-    socket.on("get-user-documents", async (email) => {
-        try {
-            const userDocuments = await Document.find({ access: { $in: [email] } });
-            socket.emit("receive-user-documents", userDocuments);
-        } catch (error) {
-            console.error("Error fetching documents:", error);
-            socket.emit("receive-user-documents", { error: "Failed to fetch documents." });
-        }
-    });
-
-    socket.on("delete-document", async ({ documentId, email }) => {
-        try {
-            await Document.findByIdAndDelete(documentId);
-            const userDocuments = await Document.find({ access: { $in: [email] } });
-            socket.emit("receive-user-documents", userDocuments);
-        } catch (error) {
-            console.error("Error deleting document:", error);
-        }
-    });
 
     socket.on("get-document", async ({ documentId, email }) => {
         try {
