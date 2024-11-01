@@ -5,6 +5,7 @@ const http = require('http')
 const session = require('express-session')
 const cookieParser = require('cookie-parser')
 const bodyParser = require('body-parser')
+const bcrypt = require('bcrypt')
 const Document = require("./models/Document")
 const User = require("./models/User")
 
@@ -60,15 +61,16 @@ app.get("/session-check", (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-    const {email, password} = req.body
+    const { email, password } = req.body
 
-    await User.findOne({email: email})
-        .then(result => {
-            if (result) {
-                if (result.password == password) {
-                    req.session.username = result.username
-                    req.session.email = result.email
-                    res.json({login: true})
+    await User.findOne({ email })
+        .then(async exist => {
+            if (exist) {
+                const isMatch = await bcrypt.compare(password, exist.password);
+                if (isMatch) {
+                    req.session.username = exist.username
+                    req.session.email = exist.email
+                    res.json({success: true})
                 } else {
                     res.status(400).json({ message: "Incorrect password" })
                 }
@@ -84,33 +86,26 @@ app.post("/login", async (req, res) => {
 app.post("/signup", async (req, res) => {
     const { email, username } = req.body
 
-    await User.findOne({
-        $or: [
-            { email: email },
-            { username: username }
-        ]
-    }).then(async exist => {
-        if (exist) {
-            if (exist.email === email) {
+    await User.findOne({ email })
+        .then(async exist => {
+            if (exist) {
                 return res.status(400).json({ message: "Email already in use." })
+            } else {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+                await User.create({email, username, password: hashedPassword})
+                    .then(() => {
+                        res.json({success: true})
+                    }).catch(err => {
+                        console.error(err)
+                        res.status(500).json({ message: "An error occurred while creating account." })
+                    });
             }
-            if (exist.username === username) {
-                return res.status(400).json({ message: "Username already exist." })
-            }
-        } else {
-            await User.create(req.body)
-                .then(user => {
-                    res.status(200).json("success")
-                    console.log("New account created: ", req.body);
-                }).catch(err => {
-                    console.error(err)
-                    res.status(500).json({ message: "An error occurred while creating account." })
-                });
-        }
-    }).catch(err => {
-        console.error(err)
-        res.status(500).json({ message: "An error occurred while connecting to the database." })
-    });
+        }).catch(err => {
+            console.error(err)
+            res.status(500).json({ message: "An error occurred while connecting to the database." })
+        });
 });
 
 app.post('/logout', (req, res) => {

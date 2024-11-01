@@ -16,8 +16,8 @@ function Signup() {
         const password = passwordRef.current.value;
 
         axios.post('http://localhost:3001/signup', { email, username, password })
-            .then(result => {
-                if (result.data === "success") {
+            .then(res => {
+                if (res.data.success) {
                     alert("Account created successfully");
                     navigate('/login')
                 }

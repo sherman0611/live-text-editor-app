@@ -29,7 +29,7 @@ function Login() {
 
         axios.post('http://localhost:3001/login', { email, password })
             .then(res => {
-                if (res.data.login) {
+                if (res.data.success) {
                     navigate('/home')
                 }
             }).catch(err => {
