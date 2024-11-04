@@ -55,7 +55,7 @@ function TextEditor() {
 
     // handle document access
     useEffect(() => {
-        if (socket == null || quill == null || user.email == null) return
+        if (socket == null || quill == null || !user?.email) return
 
         axios.post(`http://localhost:3001/documents/${documentId}`, { email: user.email })
             .then(res => {
@@ -76,7 +76,7 @@ function TextEditor() {
             quill.enable()
         })
 
-    }, [socket, quill, user.email])
+    }, [socket, quill, user?.email])
 
     // auto save
     useEffect(() => {
