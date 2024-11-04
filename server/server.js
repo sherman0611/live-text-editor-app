@@ -55,9 +55,9 @@ server.listen(3001, () => {
 
 app.get("/session-check", (req, res) => {
     if (req.session && req.session.username && req.session.email) {
-        res.json({valid: true, username: req.session.username, email: req.session.email})
+        res.json({ valid: true })
     } else {
-        res.json({valid: false})
+        res.json({ valid: false })
     }
 });
 
@@ -74,19 +74,6 @@ app.post("/login", async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: "Incorrect password" });
         }
-
-        // // regenerate session id
-        // req.session.regenerate((err) => {
-        //     if (err) {
-        //         console.error("Session regeneration error:", err);
-        //         return res.status(500).json({ message: "Session error." });
-        //     }
-            
-        //     req.session.username = user.username;
-        //     req.session.email = user.email;
-
-        //     res.json({ success: true, username: user.username, email: user.email });
-        // });
 
         req.session.username = user.username;
         req.session.email = user.email;
@@ -168,6 +155,8 @@ app.post("/delete-document", async (req, res) => {
 });
 
 app.post("/create-new-document", async (req, res) => {
+    const { email } = req.body;
+
     try {
         let uniqueId;
         let isUnique = false;
@@ -181,28 +170,40 @@ app.post("/create-new-document", async (req, res) => {
             }
         }
 
-        res.json({ id: uniqueId });
+        const newDocument = await Document.create({ 
+            _id: uniqueId, 
+            filename: defaultFilename, 
+            data: defaultValue,
+            access: [email]
+        })
+
+        res.json({ id: newDocument._id });
     } catch (error) {
-        console.error("Error generating unique document ID:", error);
-        res.status(500).json({ message: "Failed to create unique document ID." });
+        cconsole.error("Error creating document:", error);
+        res.status(500).json({ message: "Error creating document" });
     }
 });
 
-app.post("/check-document-access", async (req, res) => {
-    const { documentId, email } = req.body;
+app.post("/documents/:id", async (req, res) => {
+    const { id } = req.params;
+    const { email } = req.body;
 
     try {
-        const document = await Document.findById(documentId);
+        const document = await Document.findById(id);
 
-        if (!document) {
-            return res.status(404).json({ message: "Document not found." });
+        if (document == null) {
+            return res.json({ notFound: true });
         }
 
         const hasAccess = document.access.includes(email);
-        res.json({ hasAccess });
+        if (!hasAccess) {
+            return res.json({ hasAccess });
+        }
+
+        return
     } catch (error) {
-        console.error("Error checking document access:", error);
-        res.status(500).json({ message: "Error checking document access." });
+        console.error("Error retrieving document:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -212,9 +213,9 @@ const defaultValue = ""
 io.on("connection", socket => {
     console.log('A user is connected to: ', socket.id);
 
-    socket.on("get-document", async ({ documentId, email }) => {
+    socket.on("document-request", async ({ documentId }) => {
         try {
-            const document = await findOrCreateDocument(documentId, email)
+            const document = await Document.findById(documentId);
             socket.join(documentId)
             socket.emit("load-document", document)
         } catch (error) {
@@ -235,16 +236,3 @@ io.on("connection", socket => {
         })
     })
 })
-
-async function findOrCreateDocument(id, email) {
-    if (id == null) return
-
-    const document = await Document.findById(id)
-    if (document) return document
-
-    return await Document.create({ _id: id, 
-        filename: defaultFilename, 
-        data: defaultValue,
-        access: [email]
-    })
-}

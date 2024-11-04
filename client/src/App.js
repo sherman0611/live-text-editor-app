@@ -1,8 +1,9 @@
-import Login from "./Login";
-import Signup from "./Signup";
-import Home from "./Home";
-import TextEditor from "./TextEditor";
-import AccessDenied from "./AccessDenied";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
+import Home from "./components/Home";
+import TextEditor from "./components/TextEditor";
+import AccessDenied from "./components/AccessDenied";
+import NotFound from './components/NotFound';
 import {
     BrowserRouter as Router,
     Routes,
@@ -20,9 +21,9 @@ function App() {
 				<Route path="/home" element={<Home/>} />
 				<Route path="/documents/:id" element={<TextEditor/>} />
 				<Route path="/access-denied" element={<AccessDenied/>} />
+				<Route path="*" element={<NotFound/>} />
 			</Routes>
 		</Router>
-		
 	)
 }
 

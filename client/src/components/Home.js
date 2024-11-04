@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { UserContext } from './UserContext';
+import { UserContext } from '../UserContext';
 
 function Home() {
     const navigate = useNavigate();
@@ -36,15 +36,13 @@ function Home() {
     }, [user.email, documents]);
 
     const createNewDoc = async () => {
-        axios.post('http://localhost:3001/create-new-document')
+        axios.post('http://localhost:3001/create-new-document', { email: user.email })
             .then(res => {
                 navigate(`/documents/${res.data.id}`);
             }).catch(err => {
                 console.log(err)
                 alert("Error creating new document")
             })
-
-        
     };
 
     const deleteFile = (id) => {

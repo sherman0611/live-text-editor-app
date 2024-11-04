@@ -5,7 +5,7 @@ import { io } from 'socket.io-client'
 import { useParams } from 'react-router-dom'
 import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
-import { UserContext } from './UserContext';
+import { UserContext } from '../UserContext';
 import { useNavigate } from "react-router-dom"
 import axios from 'axios';
 
@@ -36,7 +36,6 @@ function TextEditor() {
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
-    const [hasAccess, setHasAccess] = useState(true);
     const { user, setUser } = useContext(UserContext);
 
     axios.defaults.withCredentials = true
@@ -63,27 +62,22 @@ function TextEditor() {
             })
     }, []);
 
-    // useEffect(() => {
-    //     if (!user.email) return
-
-    //     axios.post('http://localhost:3001/check-document-access', { documentId, email: user.email })
-    //         .then(res => {
-    //             if (!res.data.hasAccess) {
-    //                 setHasAccess(false)
-    //                 navigate('/access-denied', { state: { fromTextEditor: true } });
-    //             } else {
-    //                 setHasAccess(true)
-    //             }
-    //         }).catch(err => {
-    //             console.log("Error checking access:", err);
-    //             navigate('/home');
-    //         });
-    // }, [documentId, user.email, navigate]);
-
+    // handle document access
     useEffect(() => {
-        if (socket == null || quill == null || !hasAccess) return
+        if (socket == null || quill == null || user.email == null) return
 
-        socket.emit("get-document", { documentId, email: user.email });
+        axios.post(`http://localhost:3001/documents/${documentId}`, { email: user.email })
+            .then(res => {
+                if (res.data.notFound) {
+                    navigate('*');
+                } else if (!res.data.hasAccess) {
+                    navigate('/access-denied', { state: { fromTextEditor: true } });
+                }
+            }).catch(err => {
+                console.log(err)
+            })
+
+        socket.emit("document-request", { documentId });
         
         socket.once("load-document", document => {
             setFilename(document.filename)
@@ -91,7 +85,7 @@ function TextEditor() {
             quill.enable()
         })
 
-    }, [socket, quill, documentId, user.email])
+    }, [socket, quill, user.email])
 
     // auto save
     useEffect(() => {
