@@ -7,7 +7,7 @@ function Login() {
     const emailRef = useRef()
     const passwordRef = useRef()
     const navigate = useNavigate()
-    const { user, setUser } = useContext(UserContext);
+    const { setUser } = useContext(UserContext);
 
     axios.defaults.withCredentials = true
 

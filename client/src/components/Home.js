@@ -14,46 +14,47 @@ function Home() {
         checkSession();
     }, [checkSession]);
 
-    // Get documents from the database
     useEffect(() => {
-        if (!user.email) return
-
-        axios.post('http://localhost:3001/get-documents', { email: user.email })
-            .then(res => {
-                setDocuments(res.data)
-            }).catch(err => {
-                console.log(err)
-            })
-    }, [user.email, documents]);
+        if (user?.email) {
+            axios.post('http://localhost:3001/get-documents', { email: user.email })
+                .then(res => {
+                    setDocuments(res.data);
+                }).catch(err => {
+                    console.log(err);
+                });
+        }
+    }, [user?.email]);
 
     const createNewDoc = async () => {
+        if (!user.email) return;
+
         axios.post('http://localhost:3001/create-new-document', { email: user.email })
             .then(res => {
                 navigate(`/documents/${res.data.id}`);
             }).catch(err => {
-                console.log(err)
-                alert("Error creating new document")
-            })
-    };
-
-    const deleteFile = (id) => {
-        if (!user.email) return
-
-        axios.post('http://localhost:3001/delete-document', { id, email: user.email })
-            .then(() => {
-                alert("Document deleted")
-                setDocuments((prevDocuments) => prevDocuments.filter(doc => doc._id !== id));
-            })
-            .catch(err => {
-                console.log("Error deleting document:", err);
-                alert("Error deleting document")
+                console.log(err);
+                alert("Error creating new document");
             });
     };
 
+    const deleteDoc = (id) => {
+        if (!user.email) return;
+
+        axios.post('http://localhost:3001/delete-document', { id, email: user.email })
+            .then(() => {
+                alert("Document deleted");
+                setDocuments((prevDocuments) => prevDocuments.filter(doc => doc._id !== id));
+            }).catch(err => {
+                console.log("Error deleting document:", err);
+                alert("Error deleting document");
+            });
+         
+    }
+
     return (
         <div>
-            <div>{user.username}</div>
-            <div>{user.email}</div>
+            <div>{user?.username}</div>
+            <div>{user?.email}</div>
             <h1>Home</h1>
             <ul>
                 {documents.length > 0 ? (
@@ -62,7 +63,7 @@ function Home() {
                             <Link to={`/documents/${doc._id}`}>
                                 {doc.filename || 'Untitled Document'}
                             </Link>
-                            <button onClick={() => deleteFile(doc._id)}>Delete</button>
+                            <button onClick={() => deleteDoc(doc._id)}>Delete</button>
                         </li>
                     ))
                 ) : (
