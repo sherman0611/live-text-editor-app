@@ -2,26 +2,17 @@ import React, { useEffect, useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../UserContext';
+import { useAuth } from '../hooks/UseAuth';
 
 function Home() {
     const navigate = useNavigate();
     const [documents, setDocuments] = useState([])
-    const { user, setUser } = useContext(UserContext);
+    const { user } = useContext(UserContext);
+    const { checkSession, logout } = useAuth();
 
-    axios.defaults.withCredentials = true
-
-    // check if user is logged in
     useEffect(() => {
-        axios.get('http://localhost:3001/session-check')
-            .then(res => {
-                if (!res.data.valid) {
-                    navigate('/login')
-                }
-            }).catch(err => {
-                console.log(err)
-                navigate('/login')
-            })
-    }, []);
+        checkSession();
+    }, [checkSession]);
 
     // Get documents from the database
     useEffect(() => {
@@ -59,16 +50,6 @@ function Home() {
             });
     };
 
-    const logout = () => {
-        axios.get('http://localhost:3001/logout')
-            .then(() => {
-                setUser({ username: null, email: null });
-                navigate('/login')
-            }).catch(err => {
-                console.log('Logout error:', err)
-            });
-    };
-    
     return (
         <div>
             <div>{user.username}</div>

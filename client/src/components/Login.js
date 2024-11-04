@@ -13,7 +13,7 @@ function Login() {
 
     // check if user is logged in
     useEffect(() => {
-        axios.get('http://localhost:3001/session-check')
+        axios.get('http://localhost:3001/check-session')
             .then(res => {
                 if (res.data.valid) {
                     navigate('/home')
@@ -32,7 +32,7 @@ function Login() {
         axios.post('http://localhost:3001/login', { email, password })
             .then(res => {
                 if (res.data.success) {
-                    setUser({ username: res.data.username, email: res.data.email });
+                    setUser({ username: res.data.user.username, email: res.data.user.email });
                     navigate('/home')
                 }
             }).catch(err => {

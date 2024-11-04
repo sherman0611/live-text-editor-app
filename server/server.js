@@ -31,7 +31,7 @@ app.use(bodyParser.json())
 app.use(session({
     secret: 'secret',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
         secure: false,
         maxAge: 1000 * 60 * 60 * 24
@@ -53,9 +53,12 @@ server.listen(3001, () => {
     console.log("Server is running on port 3001")
 })
 
-app.get("/session-check", (req, res) => {
-    if (req.session && req.session.username && req.session.email) {
-        res.json({ valid: true })
+const defaultFilename = "Untitled"
+const defaultValue = ""
+
+app.get("/check-session", (req, res) => {
+    if (req.session.user) {
+        res.json({ valid: true, user: req.session.user })
     } else {
         res.json({ valid: false })
     }
@@ -75,10 +78,9 @@ app.post("/login", async (req, res) => {
             return res.status(400).json({ message: "Incorrect password" });
         }
 
-        req.session.username = user.username;
-        req.session.email = user.email;
+        req.session.user = { username: user.username, email: user.email }
 
-        res.json({ success: true, username: user.username, email: user.email });
+        res.json({ success: true, user });
     } catch (err) {
         console.error("Error during login:", err);
         res.status(500).json({ message: "An error occurred while connecting to the database." });
@@ -206,9 +208,6 @@ app.post("/documents/:id", async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
-
-const defaultFilename = "Untitled"
-const defaultValue = ""
 
 io.on("connection", socket => {
     console.log('A user is connected to: ', socket.id);

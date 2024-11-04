@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState, useContext } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import Quill from 'quill'
 import "quill/dist/quill.snow.css"
 import { io } from 'socket.io-client'
-import { useParams } from 'react-router-dom'
 import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
-import { UserContext } from '../UserContext';
-import { useNavigate } from "react-router-dom"
 import axios from 'axios';
+import { UserContext } from '../UserContext';
+import { useAuth } from '../hooks/UseAuth';
 
 const SAVE_INTERVAL = 2000
 const SAVE_FILENAME_TIMEOUT = 1000
@@ -36,9 +36,8 @@ function TextEditor() {
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
-    const { user, setUser } = useContext(UserContext);
-
-    axios.defaults.withCredentials = true
+    const { user } = useContext(UserContext);
+    const { checkSession } = useAuth();
 
     // connect to server
     useEffect(() => {
@@ -50,17 +49,9 @@ function TextEditor() {
         }
     }, [])
 
-    // check if user is logged in
     useEffect(() => {
-        axios.get('http://localhost:3001/session-check')
-            .then(res => {
-                if (!res.data.valid) {
-                    navigate('/login')
-                }
-            }).catch(err => {
-                console.log(err)
-            })
-    }, []);
+        checkSession();
+    }, [checkSession]);
 
     // handle document access
     useEffect(() => {

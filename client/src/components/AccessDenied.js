@@ -1,29 +1,23 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from "react-router-dom"
 import axios from 'axios';
+import { useAuth } from '../hooks/UseAuth';
 
 function AccessDenied() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { checkSession } = useAuth();
 
-    axios.defaults.withCredentials = true
-
-    // check if user is logged in
     useEffect(() => {
         if (!location.state || !location.state.fromTextEditor) {
             navigate('/home');
             return;
         }
-
-        axios.get('http://localhost:3001/session-check')
-            .then(res => {
-                if (!res.data.valid) {
-                    navigate('/login');
-                }
-            }).catch(err => {
-                console.log(err);
-            });
     }, [navigate, location.state]);
+
+    useEffect(() => {
+        checkSession();
+    }, [checkSession]);
 
     return (
         <div>
