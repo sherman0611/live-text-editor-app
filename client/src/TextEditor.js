@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useContext } from 'react'
 import Quill from 'quill'
 import "quill/dist/quill.snow.css"
 import { io } from 'socket.io-client'
 import { useParams } from 'react-router-dom'
 import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
-import { useUser } from './UserContext';
-import { useNavigate, useLocation } from "react-router-dom"
+import { UserContext } from './UserContext';
+import { useNavigate } from "react-router-dom"
 import axios from 'axios';
 
 const SAVE_INTERVAL = 2000
@@ -32,13 +32,12 @@ const TOOLBAR_OPTIONS = [
 
 function TextEditor() {
     const navigate = useNavigate()
-    const location = useLocation();
     const {id: documentId} = useParams()
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
     const [hasAccess, setHasAccess] = useState(true);
-    const { username, email } = useUser();
+    const { user, setUser } = useContext(UserContext);
 
     axios.defaults.withCredentials = true
 
@@ -64,10 +63,27 @@ function TextEditor() {
             })
     }, []);
 
-    useEffect(() => {
-        if (socket == null || quill == null) return
+    // useEffect(() => {
+    //     if (!user.email) return
 
-        socket.emit("get-document", { documentId, email });
+    //     axios.post('http://localhost:3001/check-document-access', { documentId, email: user.email })
+    //         .then(res => {
+    //             if (!res.data.hasAccess) {
+    //                 setHasAccess(false)
+    //                 navigate('/access-denied', { state: { fromTextEditor: true } });
+    //             } else {
+    //                 setHasAccess(true)
+    //             }
+    //         }).catch(err => {
+    //             console.log("Error checking access:", err);
+    //             navigate('/home');
+    //         });
+    // }, [documentId, user.email, navigate]);
+
+    useEffect(() => {
+        if (socket == null || quill == null || !hasAccess) return
+
+        socket.emit("get-document", { documentId, email: user.email });
         
         socket.once("load-document", document => {
             setFilename(document.filename)
@@ -75,15 +91,7 @@ function TextEditor() {
             quill.enable()
         })
 
-        socket.once("access-denied", () => {
-            setHasAccess(false)
-        });
-
-        if (!hasAccess) {
-            navigate('/access-denied', { state: { fromTextEditor: true } });
-        }
-
-    }, [socket, quill, documentId, hasAccess, navigate])
+    }, [socket, quill, documentId, user.email])
 
     // auto save
     useEffect(() => {

@@ -1,11 +1,13 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useContext } from 'react'
 import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
+import { UserContext } from './UserContext';
 
 function Login() {
     const emailRef = useRef()
     const passwordRef = useRef()
     const navigate = useNavigate()
+    const { user, setUser } = useContext(UserContext);
 
     axios.defaults.withCredentials = true
 
@@ -30,6 +32,7 @@ function Login() {
         axios.post('http://localhost:3001/login', { email, password })
             .then(res => {
                 if (res.data.success) {
+                    setUser({ username: res.data.username, email: res.data.email });
                     navigate('/home')
                 }
             }).catch(err => {

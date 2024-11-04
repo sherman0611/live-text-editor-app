@@ -75,10 +75,23 @@ app.post("/login", async (req, res) => {
             return res.status(400).json({ message: "Incorrect password" });
         }
 
+        // // regenerate session id
+        // req.session.regenerate((err) => {
+        //     if (err) {
+        //         console.error("Session regeneration error:", err);
+        //         return res.status(500).json({ message: "Session error." });
+        //     }
+            
+        //     req.session.username = user.username;
+        //     req.session.email = user.email;
+
+        //     res.json({ success: true, username: user.username, email: user.email });
+        // });
+
         req.session.username = user.username;
         req.session.email = user.email;
 
-        res.json({ success: true });
+        res.json({ success: true, username: user.username, email: user.email });
     } catch (err) {
         console.error("Error during login:", err);
         res.status(500).json({ message: "An error occurred while connecting to the database." });
@@ -175,6 +188,24 @@ app.post("/create-new-document", async (req, res) => {
     }
 });
 
+app.post("/check-document-access", async (req, res) => {
+    const { documentId, email } = req.body;
+
+    try {
+        const document = await Document.findById(documentId);
+
+        if (!document) {
+            return res.status(404).json({ message: "Document not found." });
+        }
+
+        const hasAccess = document.access.includes(email);
+        res.json({ hasAccess });
+    } catch (error) {
+        console.error("Error checking document access:", error);
+        res.status(500).json({ message: "Error checking document access." });
+    }
+});
+
 const defaultFilename = "Untitled"
 const defaultValue = ""
 
@@ -184,10 +215,6 @@ io.on("connection", socket => {
     socket.on("get-document", async ({ documentId, email }) => {
         try {
             const document = await findOrCreateDocument(documentId, email)
-            if (!document.access.includes(email)) {
-                socket.emit("access-denied")
-                return
-            }
             socket.join(documentId)
             socket.emit("load-document", document)
         } catch (error) {

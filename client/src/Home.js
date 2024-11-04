@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { useUser } from './UserContext';
+import { UserContext } from './UserContext';
 
 function Home() {
     const navigate = useNavigate();
     const [documents, setDocuments] = useState([])
-    const { username, setUsername, email, setEmail } = useUser();
+    const { user, setUser } = useContext(UserContext);
 
     axios.defaults.withCredentials = true
 
@@ -14,10 +14,7 @@ function Home() {
     useEffect(() => {
         axios.get('http://localhost:3001/session-check')
             .then(res => {
-                if (res.data.valid) {
-                    setUsername(res.data.username)
-                    setEmail(res.data.email)
-                } else {
+                if (!res.data.valid) {
                     navigate('/login')
                 }
             }).catch(err => {
@@ -28,13 +25,15 @@ function Home() {
 
     // Get documents from the database
     useEffect(() => {
-        axios.post('http://localhost:3001/get-documents', { email })
+        if (!user.email) return
+
+        axios.post('http://localhost:3001/get-documents', { email: user.email })
             .then(res => {
                 setDocuments(res.data)
             }).catch(err => {
                 console.log(err)
             })
-    }, [email, documents]); 
+    }, [user.email, documents]);
 
     const createNewDoc = async () => {
         axios.post('http://localhost:3001/create-new-document')
@@ -49,7 +48,9 @@ function Home() {
     };
 
     const deleteFile = (id) => {
-        axios.post('http://localhost:3001/delete-document', {  id, email })
+        if (!user.email) return
+
+        axios.post('http://localhost:3001/delete-document', { id, email: user.email })
             .then(() => {
                 alert("Document deleted")
                 setDocuments((prevDocuments) => prevDocuments.filter(doc => doc._id !== id));
@@ -63,8 +64,7 @@ function Home() {
     const logout = () => {
         axios.get('http://localhost:3001/logout')
             .then(() => {
-                setUsername(null)
-                setEmail(null)
+                setUser({ username: null, email: null });
                 navigate('/login')
             }).catch(err => {
                 console.log('Logout error:', err)
@@ -73,8 +73,8 @@ function Home() {
     
     return (
         <div>
-            <div>{username}</div>
-            <div>{email}</div>
+            <div>{user.username}</div>
+            <div>{user.email}</div>
             <h1>Home</h1>
             <ul>
                 {documents.length > 0 ? (

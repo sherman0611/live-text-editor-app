@@ -9,22 +9,19 @@ import {
     Route,
 	Navigate,
 } from "react-router-dom"
-import { UserProvider } from './UserContext';
 
 function App() {
 	return (
-		<UserProvider>
-			<Router>
-				<Routes>
-					<Route path="/" element={<Navigate to="/login" />} />
-					<Route path="/login" element={<Login/>} />
-					<Route path="/signup" element={<Signup/>} />
-					<Route path="/home" element={<Home/>} />
-					<Route path="/documents/:id" element={<TextEditor/>} />
-					<Route path="/access-denied" element={<AccessDenied/>} />
-				</Routes>
-			</Router>
-		</UserProvider>
+		<Router>
+			<Routes>
+				<Route path="/" element={<Navigate to="/login" />} />
+				<Route path="/login" element={<Login/>} />
+				<Route path="/signup" element={<Signup/>} />
+				<Route path="/home" element={<Home/>} />
+				<Route path="/documents/:id" element={<TextEditor/>} />
+				<Route path="/access-denied" element={<AccessDenied/>} />
+			</Routes>
+		</Router>
 		
 	)
 }
