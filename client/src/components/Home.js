@@ -15,18 +15,18 @@ function Home() {
     }, [checkSession]);
 
     useEffect(() => {
-        if (user?.email) {
-            axios.post('http://localhost:3001/get-documents', { email: user.email })
-                .then(res => {
-                    setDocuments(res.data);
-                }).catch(err => {
-                    console.log(err);
-                });
-        }
+        if (!user?.email) return
+
+        axios.post('http://localhost:3001/get-documents', { email: user.email })
+            .then(res => {
+                setDocuments(res.data);
+            }).catch(err => {
+                console.log(err);
+            });
     }, [user?.email]);
 
     const createNewDoc = async () => {
-        if (!user.email) return;
+        if (!user?.email) return;
 
         axios.post('http://localhost:3001/create-new-document', { email: user.email })
             .then(res => {
@@ -38,7 +38,7 @@ function Home() {
     };
 
     const deleteDoc = (id) => {
-        if (!user.email) return;
+        if (!user?.email) return;
 
         axios.post('http://localhost:3001/delete-document', { id, email: user.email })
             .then(() => {

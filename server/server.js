@@ -186,6 +186,32 @@ app.post("/create-new-document", async (req, res) => {
     }
 });
 
+app.post("/add-user-access", async (req, res) => {
+    const { email, documentId } = req.body;
+
+    try {
+        const existingUser = await User.findOne({ email });
+        if (!existingUser) {
+            return res.status(400).json({ message: "Email not yet registered." });
+        }
+
+        const document = await Document.findById(documentId)
+        if (!document) {
+            return res.status(404).json({ message: "Document not found." });
+        }
+
+        if (!document.access.includes(email)) {
+            document.access.push(email);
+            await document.save();
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error adding user:", err);
+        res.status(500).json({ message: "An error occurred while adding user" });
+    }
+});
+
 app.post("/documents/:id", async (req, res) => {
     const { id } = req.params;
     const { email } = req.body;

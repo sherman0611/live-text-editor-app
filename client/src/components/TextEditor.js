@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useContext } from 'react'
+import React, { useCallback, useEffect, useState, useContext, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Quill from 'quill'
 import "quill/dist/quill.snow.css"
@@ -36,6 +36,7 @@ function TextEditor() {
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
+    const emailRef = useRef()
     const { user } = useContext(UserContext);
     const { checkSession } = useAuth();
 
@@ -160,7 +161,16 @@ function TextEditor() {
     }
 
     function addUserAccess() {
-        
+        const email = emailRef.current.value;
+
+        axios.post('http://localhost:3001/add-user-access', { email, documentId })
+            .then(res => {
+                if (res.data.success) {
+                    alert(`${email} added`)
+                }
+            }).catch(err => {
+                alert(err.response.data.message || "Failed adding user");
+            });
     }
 
     // set up quill editor
@@ -182,6 +192,7 @@ function TextEditor() {
         <div className="container">
             <input type="text" id="filename" name="filename" value={filename} maxLength="20" onChange={handleFilenameChange} />
             <button onClick={downloadFile}>Download file</button>
+            <input type='text' placeholder='Email' name='email' ref={emailRef} />
             <button onClick={addUserAccess}>Add user access</button>
             <div ref={wrapperRef}></div>
         </div>
