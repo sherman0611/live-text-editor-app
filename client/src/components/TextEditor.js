@@ -8,6 +8,7 @@ import * as quillToWord from 'quill-to-word';
 import axios from 'axios';
 import { UserContext } from '../UserContext';
 import { useAuth } from '../hooks/UseAuth';
+import TopBar from './TopBar';
 
 const SAVE_INTERVAL = 2000
 const SAVE_FILENAME_TIMEOUT = 1000
@@ -189,12 +190,17 @@ function TextEditor() {
     }, [])
     
     return (
-        <div className="container">
-            <input type="text" id="filename" name="filename" value={filename} maxLength="20" onChange={handleFilenameChange} />
-            <button onClick={downloadFile}>Download file</button>
-            <input type='text' placeholder='Email' name='email' ref={emailRef} />
-            <button onClick={addUserAccess}>Add user access</button>
-            <div ref={wrapperRef}></div>
+        <div>
+            <TopBar/>
+            <div className='main-container'>
+                <div className="container">
+                    <input type="text" id="filename" name="filename" value={filename} maxLength="20" onChange={handleFilenameChange} />
+                    <button onClick={downloadFile}>Download file</button>
+                    <input type='text' placeholder='Email' name='email' ref={emailRef} />
+                    <button onClick={addUserAccess}>Add user access</button>
+                    <div ref={wrapperRef}></div>
+                </div>
+            </div>
         </div>
     )
 }

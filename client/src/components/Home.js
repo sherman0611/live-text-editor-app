@@ -3,30 +3,41 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../UserContext';
 import { useAuth } from '../hooks/UseAuth';
+import TopBar from './TopBar';
+import ClipLoader from 'react-spinners/ClipLoader';
 
 function Home() {
     const navigate = useNavigate();
     const [documents, setDocuments] = useState([])
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const { user } = useContext(UserContext);
-    const { checkSession, logout } = useAuth();
+    const { checkSession } = useAuth();
 
     useEffect(() => {
-        checkSession();
+        checkSession()
     }, [checkSession]);
 
     useEffect(() => {
-        if (!user?.email) return
+        if (!user) {
+            setLoading(false)
+            return
+        }
 
         axios.post('http://localhost:3001/get-documents', { email: user.email })
             .then(res => {
-                setDocuments(res.data);
+                setDocuments(res.data)
+                setError(null);
             }).catch(err => {
-                console.log(err);
+                console.log(err)
+                setError('Failed to retrieve documents');
+            }).finally(() => {
+                setLoading(false)
             });
     }, [user?.email]);
 
     const createNewDoc = async () => {
-        if (!user?.email) return;
+        if (!user) return;
 
         axios.post('http://localhost:3001/create-new-document', { email: user.email })
             .then(res => {
@@ -38,7 +49,7 @@ function Home() {
     };
 
     const deleteDoc = (id) => {
-        if (!user?.email) return;
+        if (!user) return;
 
         axios.post('http://localhost:3001/delete-document', { id, email: user.email })
             .then(() => {
@@ -48,30 +59,44 @@ function Home() {
                 console.log("Error deleting document:", err);
                 alert("Error deleting document");
             });
-         
     }
 
     return (
         <div>
-            <div>{user?.username}</div>
-            <div>{user?.email}</div>
-            <h1>Home</h1>
-            <ul>
-                {documents.length > 0 ? (
-                    documents.map((doc) => (
-                        <li key={doc._id}>
-                            <Link to={`/documents/${doc._id}`}>
-                                {doc.filename || 'Untitled Document'}
-                            </Link>
-                            <button onClick={() => deleteDoc(doc._id)}>Delete</button>
-                        </li>
-                    ))
-                ) : (
-                    <p>No files</p>
+            <TopBar/>
+            <div className='main-container'>
+                <h1>Home</h1>
+
+                {loading && (
+                    <div className="loading-screen">
+                        <p>Loading documents...</p>
+                        <ClipLoader color="#00BFFF" size={50} />
+                    </div>
                 )}
-            </ul>
-            <button onClick={createNewDoc}>Create new document</button>
-            <button onClick={logout}>Log out</button>
+
+                {!loading && error && (
+                    <p className="error-message">{error}</p>
+                )}
+
+                {!loading && !error && (
+                    <ul>
+                        {documents.length > 0 ? (
+                            documents.map((doc) => (
+                                <li key={doc._id}>
+                                    <Link to={`/documents/${doc._id}`}>
+                                        {doc.filename || 'Untitled Document'}
+                                    </Link>
+                                    <button onClick={() => deleteDoc(doc._id)}>Delete</button>
+                                </li>
+                            ))
+                        ) : (
+                            <p>No files</p>
+                        )}
+                    </ul>
+                )}
+
+                <button onClick={createNewDoc}>Create new document</button>
+            </div>
         </div>
     );
 }
