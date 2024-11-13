@@ -41,6 +41,10 @@ function TextEditor() {
     const { user } = useContext(UserContext);
     const { checkSession } = useAuth();
 
+    useEffect(() => {
+        if (!user) navigate('/login')
+    }, [user, navigate]);
+
     // connect to server
     useEffect(() => {
         const s = io("http://localhost:3001")

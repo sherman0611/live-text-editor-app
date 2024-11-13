@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../UserContext';
 import { useAuth } from '../hooks/UseAuth';
-import '../styles.css';
+import '../styles/TopBar.css';
 
 const TopBar = () => {
     const { user } = useContext(UserContext);

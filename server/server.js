@@ -9,6 +9,7 @@ const bcrypt = require('bcrypt')
 const { v4: uuidv4 } = require('uuid');
 const Document = require("./models/Document")
 const User = require("./models/User")
+const { validateLogin, validateSignup } = require('./middlewares/validateForm');
 
 // connect server to mongodb
 mongoose.connect("mongodb://localhost/live-text-editor")
@@ -38,6 +39,7 @@ app.use(session({
     }
 }))
 
+const PORT = 3001
 const server = http.createServer(app)
 
 // set up socket.io server
@@ -49,8 +51,8 @@ const io = require('socket.io')(server, {
 })
 
 // start server
-server.listen(3001, () => {
-    console.log("Server is running on port 3001")
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`)
 })
 
 const defaultFilename = "Untitled"
@@ -64,18 +66,18 @@ app.get("/check-session", (req, res) => {
     }
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", validateLogin, async (req, res) => {
     const { email, password } = req.body;
 
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "Incorrect email" });
+            return res.status(400).json({ message: "Incorrect email." });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: "Incorrect password" });
+            return res.status(400).json({ message: "Incorrect password." });
         }
 
         req.session.user = { username: user.username, email: user.email }
@@ -87,13 +89,13 @@ app.post("/login", async (req, res) => {
     }
 })
 
-app.post("/signup", async (req, res) => {
+app.post("/signup", validateSignup, async (req, res) => {
     const { email, username, password } = req.body;
 
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "Email already in use." });
+            return res.status(400).json({ message: "Email already registered." });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -108,7 +110,6 @@ app.post("/signup", async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error("Error during signup:", err);
-        res.status(500).json({ message: "An error occurred while creating the account." });
     }
 });
 
@@ -163,6 +164,7 @@ app.post("/create-new-document", async (req, res) => {
         let uniqueId;
         let isUnique = false;
 
+        // create new document id
         while (!isUnique) {
             uniqueId = uuidv4();
             const existingDocument = await Document.findById(uniqueId);

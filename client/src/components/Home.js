@@ -15,14 +15,19 @@ function Home() {
     const { checkSession } = useAuth();
 
     useEffect(() => {
+        if (!user) {
+            navigate('/login')
+        } else {
+            setLoading(false);
+        }
+    }, [user, navigate]);
+
+    useEffect(() => {
         checkSession()
     }, [checkSession]);
 
     useEffect(() => {
-        if (!user) {
-            setLoading(false)
-            return
-        }
+        if (!user) return;
 
         axios.post('http://localhost:3001/get-documents', { email: user.email })
             .then(res => {
