@@ -1,4 +1,4 @@
-.login {
+.login-container {
     height: 100vh;
     display: flex;
     justify-content: center;
@@ -7,7 +7,7 @@
     margin: 0;
 }
 
-.login > div {
+.login-container > div {
     background-color: white; 
     padding: 30px;
     border-radius: 8px;
@@ -16,20 +16,20 @@
     width: 100%;
 }
 
-.login form {
+.login-container form {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
-.login input {
+.login-container input {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 16px;
 }
 
-.login button {
+.login-container button {
     padding: 10px;
     background-color: #007BFF;
     color: white;
@@ -40,21 +40,21 @@
     transition: background-color 0.3s ease;
 }
 
-.login button:hover {
+.login-container button:hover {
     background-color: #0056b3;
 }
 
-.login p {
+.login-container p {
     text-align: center;
     margin-top: 10px;
 }
 
-.login a {
+.login-container a {
     color: #007bff;
     text-decoration: none;
 }
 
-.login a:hover {
+.login-container a:hover {
     text-decoration: underline;
 }
 

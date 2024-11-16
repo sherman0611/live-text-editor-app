@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import axios from 'axios';
-import { useAuth } from '../hooks/UseAuth';
+import { useAuth } from '../utils/authUtils';
 
 function AccessDenied() {
     const navigate = useNavigate();

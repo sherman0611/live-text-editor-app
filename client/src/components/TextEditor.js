@@ -7,8 +7,9 @@ import { saveAs } from 'file-saver';
 import * as quillToWord from 'quill-to-word';
 import axios from 'axios';
 import { UserContext } from '../UserContext';
-import { useAuth } from '../hooks/UseAuth';
+import { useAuth } from '../utils/authUtils';
 import TopBar from './TopBar';
+import PopupWindow from '../utils/PopupWindow';
 
 const SAVE_INTERVAL = 2000
 const SAVE_FILENAME_TIMEOUT = 1000
@@ -37,6 +38,8 @@ function TextEditor() {
     const [socket, setSocket] = useState()
     const [quill, setQuill] = useState()
     const [filename, setFilename] = useState("Untitled");
+    const [isPopupOpen, setPopupOpen] = useState(false);
+    const [userAccessList, setUserAccessList] = useState([]);
     const emailRef = useRef()
     const { user } = useContext(UserContext);
     const { checkSession } = useAuth();
@@ -156,6 +159,13 @@ function TextEditor() {
         }
     }, [socket, quill])
 
+    // fetch users when opening user access window
+    useEffect(() => {
+        if (isPopupOpen && documentId) {
+            fetchUserAccessList();
+        }
+    }, [isPopupOpen, documentId]);
+
     async function downloadFile() {
         const delta = quill.getContents();
         const quillToWordConfig = {
@@ -165,16 +175,43 @@ function TextEditor() {
         saveAs(docAsBlob, `${filename}.docx`);
     }
 
+    function fetchUserAccessList() {
+        axios.post(`http://localhost:3001/document-access/${documentId}`)
+            .then(res => {
+                setUserAccessList(res.data.users || []);
+            })
+            .catch(err => {
+                console.error("Failed to fetch user access list:", err);
+                alert("Failed to fetch user access list");
+            });
+    };
+
     function addUserAccess() {
         const email = emailRef.current.value;
 
-        axios.post('http://localhost:3001/add-user-access', { email, documentId })
+        axios.post(`http://localhost:3001/add-user-access/${documentId}`, { email })
             .then(res => {
                 if (res.data.success) {
+                    fetchUserAccessList()
                     alert(`${email} added`)
                 }
             }).catch(err => {
+                fetchUserAccessList();
                 alert(err.response.data.message || "Failed adding user");
+            });
+    }
+
+    function removeUserAccess(email) {
+        axios.post(`http://localhost:3001/remove-user-access/${documentId}`, { email })
+            .then(res => {
+                if (res.data.success) {
+                    fetchUserAccessList();
+                    alert(`${email} removed`);
+                }
+            })
+            .catch(err => {
+                fetchUserAccessList();
+                alert(err.response.data.message || "Failed removing user");
             });
     }
 
@@ -200,11 +237,32 @@ function TextEditor() {
                 <div className="container">
                     <input type="text" id="filename" name="filename" value={filename} maxLength="20" onChange={handleFilenameChange} />
                     <button onClick={downloadFile}>Download file</button>
-                    <input type='text' placeholder='Email' name='email' ref={emailRef} />
-                    <button onClick={addUserAccess}>Add user access</button>
+                    <button onClick={() => setPopupOpen(true)}>User access</button>
                     <div ref={wrapperRef}></div>
                 </div>
             </div>
+
+            <PopupWindow isOpen={isPopupOpen} onClose={() => setPopupOpen(false)}>
+                <h3>User Access</h3>
+
+                <h4>Users with access:</h4>
+                <div>
+                    {userAccessList.map((email, index) => (
+                        <div key={index}>
+                            <span>{email}</span>
+                            {email !== user?.email && (
+                                <button onClick={() => removeUserAccess(email)}>
+                                    x
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                <h4>Add user access:</h4>
+                <input type='text' placeholder='Email' name='email' ref={emailRef} />
+                <button className='submit-button' onClick={addUserAccess}>Add</button>
+            </PopupWindow>
         </div>
     )
 }

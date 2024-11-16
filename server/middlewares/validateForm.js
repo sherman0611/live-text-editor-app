@@ -17,6 +17,16 @@ const validate = (email, password) => {
     return { error: false };
 };
 
+const validateEmail = (req, res, next) => {
+    const { email } = req.body;
+
+    if (!email || !validator.isEmail(email)) {
+        return res.status(400).json({ message: "Please enter a valid email address." });
+    }
+
+    next();
+};
+
 const validateLogin = (req, res, next) => {
     const { email, password } = req.body;
 
@@ -43,7 +53,9 @@ const validateSignup = (req, res, next) => {
     next();
 };
 
+
 module.exports = {
+    validateEmail,
     validateLogin,
     validateSignup,
 };

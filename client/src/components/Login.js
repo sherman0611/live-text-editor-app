@@ -63,7 +63,7 @@ function Login() {
     };
 
     return (
-        <div className='login'>
+        <div className='login-container'>
             <div>
                 <h1>Log in</h1>
 

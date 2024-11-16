@@ -9,7 +9,7 @@ const bcrypt = require('bcrypt')
 const { v4: uuidv4 } = require('uuid');
 const Document = require("./models/Document")
 const User = require("./models/User")
-const { validateLogin, validateSignup } = require('./middlewares/validateForm');
+const { validateEmail, validateLogin, validateSignup } = require('./middlewares/validateForm');
 
 // connect server to mongodb
 mongoose.connect("mongodb://localhost/live-text-editor")
@@ -85,7 +85,7 @@ app.post("/login", validateLogin, async (req, res) => {
         res.json({ success: true, user });
     } catch (err) {
         console.error("Error during login:", err);
-        res.status(500).json({ message: "An error occurred while connecting to the database." });
+        res.status(500).json({ message: "Internal server error" });
     }
 })
 
@@ -110,6 +110,7 @@ app.post("/signup", validateSignup, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error("Error during signup:", err);
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -132,7 +133,7 @@ app.post("/get-documents", async (req, res) => {
         res.json(userDocuments);
     } catch (err) {
         console.error("Error fetching documents:", err);
-        res.status(500).json({ message: "Failed to fetch documents." });
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -153,7 +154,7 @@ app.post("/delete-document", async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error("Error deleting document:", error);
-        res.status(500).json({ message: "Failed to delete document." });
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -184,12 +185,13 @@ app.post("/create-new-document", async (req, res) => {
         res.json({ id: newDocument._id });
     } catch (error) {
         cconsole.error("Error creating document:", error);
-        res.status(500).json({ message: "Error creating document" });
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
-app.post("/add-user-access", async (req, res) => {
-    const { email, documentId } = req.body;
+app.post("/add-user-access/:id", validateEmail, async (req, res) => {
+    const { id } = req.params;
+    const { email } = req.body;
 
     try {
         const existingUser = await User.findOne({ email });
@@ -197,20 +199,46 @@ app.post("/add-user-access", async (req, res) => {
             return res.status(400).json({ message: "Email not yet registered." });
         }
 
-        const document = await Document.findById(documentId)
+        const document = await Document.findById(id)
+        if (!document) {
+            return res.status(404).json({ message: "Document not found." });
+        }
+
+        if (document.access.includes(email)) {
+            return res.status(400).json({ message: "Email already has access to the document." });
+        }
+
+        document.access.push(email);
+        await document.save();
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error adding user:", err);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.post("/remove-user-access/:id", async (req, res) => {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    try {
+        const document = await Document.findById(id);
         if (!document) {
             return res.status(404).json({ message: "Document not found." });
         }
 
         if (!document.access.includes(email)) {
-            document.access.push(email);
-            await document.save();
+            return res.status(400).json({ message: "Email does not have access to the document." });
         }
 
-        res.json({ success: true });
+        document.access = document.access.filter(userEmail => userEmail !== email);
+        await document.save();
+
+        res.json({ success: true, message: "User access removed successfully." });
     } catch (err) {
-        console.error("Error adding user:", err);
-        res.status(500).json({ message: "An error occurred while adding user" });
+        console.error("Error removing user access:", err);
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -231,6 +259,23 @@ app.post("/documents/:id", async (req, res) => {
         }
 
         return
+    } catch (error) {
+        console.error("Error retrieving document:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.post("/document-access/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await Document.findById(id);
+
+        if (document == null) {
+            return res.json({ notFound: true });
+        }
+
+        return res.json({ users: document.access });
     } catch (error) {
         console.error("Error retrieving document:", error);
         res.status(500).json({ message: "Internal server error" });

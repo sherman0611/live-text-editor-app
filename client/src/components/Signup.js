@@ -91,7 +91,7 @@ function Signup() {
     }
 
     return (
-        <div className='login'>
+        <div className='login-container'>
             <div>
                 <h1>Sign up</h1>
 

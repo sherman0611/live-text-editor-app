@@ -2,9 +2,10 @@ import React, { useEffect, useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../UserContext';
-import { useAuth } from '../hooks/UseAuth';
+import { useAuth } from '../utils/authUtils';
 import TopBar from './TopBar';
 import ClipLoader from 'react-spinners/ClipLoader';
+import '../styles/Home.css';
 
 function Home() {
     const navigate = useNavigate();
@@ -66,41 +67,60 @@ function Home() {
             });
     }
 
+    function DocumentCard({ doc, onDelete }) {
+        return (
+            <div className="document-card">
+                <Link to={`/documents/${doc._id}`}>
+                    <div className="document-icon" />
+                        <div className="document-info">
+                        <p className="document-title">{doc.filename || 'Untitled Document'}</p>
+                    </div>
+                </Link>
+                <div className="document-actions">
+                    <button onClick={onDelete}>Delete</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div>
-            <TopBar/>
-            <div className='main-container'>
-                <h1>Home</h1>
+            <TopBar />
+            <div className="main-container">
+                <div className="home-container">
+                    <h1>My Documents</h1>
 
-                {loading && (
-                    <div className="loading-screen">
-                        <p>Loading documents...</p>
-                        <ClipLoader color="#00BFFF" size={50} />
-                    </div>
-                )}
+                    {loading && (
+                        <div className="loading-screen">
+                            <p>Loading documents...</p>
+                            <ClipLoader color="#00BFFF" size={50} />
+                        </div>
+                    )}
 
-                {!loading && error && (
-                    <p className="error-message">{error}</p>
-                )}
+                    {!loading && error && (
+                        <p className="error-message">{error}</p>
+                    )}
 
-                {!loading && !error && (
-                    <ul>
-                        {documents.length > 0 ? (
-                            documents.map((doc) => (
-                                <li key={doc._id}>
-                                    <Link to={`/documents/${doc._id}`}>
-                                        {doc.filename || 'Untitled Document'}
-                                    </Link>
-                                    <button onClick={() => deleteDoc(doc._id)}>Delete</button>
-                                </li>
-                            ))
-                        ) : (
-                            <p>No files</p>
-                        )}
-                    </ul>
-                )}
+                    {!loading && !error && (
+                        <div className="document-grid">
+                            {documents.length > 0 ? (
+                                documents.map((doc) => (
+                                    <DocumentCard
+                                        key={doc._id}
+                                        doc={doc}
+                                        onDelete={() => deleteDoc(doc._id)}
+                                    />
+                                ))
+                            ) : (
+                                <p>No documents found</p>
+                            )}
+                        </div>
+                    )}
 
-                <button onClick={createNewDoc}>Create new document</button>
+                    <button className="create-btn" onClick={createNewDoc}>
+                        Create New Document
+                    </button>
+                </div>
             </div>
         </div>
     );
