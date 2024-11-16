@@ -143,14 +143,15 @@ app.post("/delete-document", async (req, res) => {
     try {
         const document = await Document.findById(id);
         if (!document) {
-            return res.status(404).json({ message: "Document not found." });
+            return res.status(400).json({ message: "Document not found." });
         }
 
-        if (!document.access.includes(email)) {
-            return res.status(403).json({ message: "You do not have permission to delete this document." });
+        if (document.access[0] !== email) {
+            return res.status(400).json({ message: "Only the owner can delete this document." });
         }
 
         await Document.findByIdAndDelete(id);
+
         res.json({ success: true });
     } catch (error) {
         console.error("Error deleting document:", error);
@@ -235,7 +236,7 @@ app.post("/remove-user-access/:id", async (req, res) => {
         document.access = document.access.filter(userEmail => userEmail !== email);
         await document.save();
 
-        res.json({ success: true, message: "User access removed successfully." });
+        res.json({ success: true });
     } catch (err) {
         console.error("Error removing user access:", err);
         res.status(500).json({ message: "Internal server error" });

@@ -40,6 +40,7 @@ function TextEditor() {
     const [filename, setFilename] = useState("Untitled");
     const [isPopupOpen, setPopupOpen] = useState(false);
     const [userAccessList, setUserAccessList] = useState([]);
+    const [message, setMessage] = useState('');
     const emailRef = useRef()
     const { user } = useContext(UserContext);
     const { checkSession } = useAuth();
@@ -48,7 +49,7 @@ function TextEditor() {
         if (!user) navigate('/login')
     }, [user, navigate]);
 
-    // connect to server
+    // connect to socket server
     useEffect(() => {
         const s = io("http://localhost:3001")
         setSocket(s)
@@ -163,6 +164,7 @@ function TextEditor() {
     useEffect(() => {
         if (isPopupOpen && documentId) {
             fetchUserAccessList();
+            setMessage('')
         }
     }, [isPopupOpen, documentId]);
 
@@ -189,15 +191,25 @@ function TextEditor() {
     function addUserAccess() {
         const email = emailRef.current.value;
 
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setMessage({ type: 'error', text: 'Please enter a valid email address.' });
+            return;
+        }
+
         axios.post(`http://localhost:3001/add-user-access/${documentId}`, { email })
             .then(res => {
                 if (res.data.success) {
                     fetchUserAccessList()
-                    alert(`${email} added`)
+                    setMessage({ type: 'success', text: `${email} added.` })
                 }
             }).catch(err => {
                 fetchUserAccessList();
-                alert(err.response.data.message || "Failed adding user");
+                if (err.response && err.response.data && err.response.data.message) {
+                    setMessage({ type: 'error', text: err.response.data.message })
+                } else {
+                    setMessage({ type: 'error', text: 'Something went wrong. Please try again.' });
+                }
             });
     }
 
@@ -206,12 +218,16 @@ function TextEditor() {
             .then(res => {
                 if (res.data.success) {
                     fetchUserAccessList();
-                    alert(`${email} removed`);
+                    setMessage({ type: 'success', text: `${email} removed.` })
                 }
             })
             .catch(err => {
                 fetchUserAccessList();
-                alert(err.response.data.message || "Failed removing user");
+                if (err.response && err.response.data && err.response.data.message) {
+                    setMessage({ type: 'error', text: err.response.data.message })
+                } else {
+                    setMessage({ type: 'error', text: 'Something went wrong. Please try again.' });
+                }
             });
     }
 
@@ -245,8 +261,14 @@ function TextEditor() {
             <PopupWindow isOpen={isPopupOpen} onClose={() => setPopupOpen(false)}>
                 <h3>User Access</h3>
 
+                {message.text && (
+                    <div className={`message ${message.type}`}>
+                        {message.text}
+                    </div>
+                )}
+
                 <h4>Users with access:</h4>
-                <div>
+                <div className='scrollable'>
                     {userAccessList.map((email, index) => (
                         <div key={index}>
                             <span>{email}</span>
